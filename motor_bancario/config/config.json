@@ -1,0 +1,33 @@
+{
+  "rutas": {
+    "carpeta_entrada_pdfs": "C:\\Users\\TU_USUARIO\\Documents\\EstadosBancarios",
+    "carpeta_motor": ".",
+    "catalogos": "catalogos",
+    "datos": "datos",
+    "salidas": "salidas",
+    "logs": "logs",
+    "revision_manual": "_revision_manual"
+  },
+  "extraccion": {
+    "min_chars_nativo_por_pagina": 200,
+    "alto_minimo_linea_ocr_px": 8,
+    "intentar_fuente_alternativa_si_no_coincide": true,
+    "tolerancia_redondeo_saldos": 0.01
+  },
+  "ocr": {
+    "motor_principal": "rapidocr",
+    "motor_respaldo": "tesseract",
+    "tesseract_idioma": "spa",
+    "tesseract_psm": 6,
+    "notas": "VERIFICAR: instalar rapidocr-onnxruntime o paddleocr; tesseract-OCR con paquete de idioma spa a nivel de SO."
+  },
+  "base_datos": {
+    "archivo": "datos/transacciones.db"
+  },
+  "conciliacion": {
+    "monedas_activas": ["PEN", "USD"]
+  },
+  "dashboard": {
+    "streamlit_puerto": 8501
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "$comentario": "CATALOGO DE CLASIFICACION. El motor recorre 'reglas' en orden de prioridad (menor numero = mayor prioridad). La primera regla cuyo regex haga match con la descripcion_normalizada gana. Si ninguna matchea -> tipo NO_IDENTIFICADO y cuenta_pcge NULL (entra a cola de conciliacion N4). Las cuentas PCGE sugeridas son referenciales para el Peru (Sistema Contable 2023) y deben ser revisadas por el contador segun el plan de cuentas de la empresa. VERIFICAR cada cuenta contra el PCGE usado por la empresa.",
+  "descripcion_normalizacion": {
+    "$comentario": "Pases aplicados ANTES de evaluar los regex de reglas.",
+    "mayusculas": true,
+    "quitar_acentos": true,
+    "colapsar_espacios": true
+  },
+  "reglas": [
+    {"prioridad": 10, "nombre": "ITF", "regex": "\\bITF\\b|IMPUESTO A LAS TRANSACCIONES?|(?<!DETRAC)\\bT.\\s?TRANSACC", "tipo_movimiento": "IMPUESTO", "cuenta_pcge_sugerida": "6782 Impuesto General a las Ventas e IGV / Otras (VERIFICAR: ITF suele registrarse en 6782 u otra subcuenta de tributos; confirmar con contador)"},
+    {"prioridad": 15, "nombre": "Detraccion ITF", "regex": "DETRAC.*ITF", "tipo_movimiento": "IMPUESTO", "cuenta_pcge_sugerida": "4011 OTROS TRIBUTOS POR PAGAR - ITF por detracciones (VERIFICAR)"},
+    {"prioridad": 20, "nombre": "Detracciones", "regex": "DETRACC|CDA|CUENTA DETRACC", "tipo_movimiento": "DETRACCION", "cuenta_pcge_sugerida": "10D3 EFECTIVO EN BANCOS - CUENTAS ESPECIALES BANCA SISTEMA FINANCIERO - DETRACCIONES"},
+    {"prioridad": 25, "nombre": "ISC/IGV detraccion servicios", "regex": "DETRAC.*(SERVICIO|TRANSPORTE)", "tipo_movimiento": "DETRACCION", "cuenta_pcge_sugerida": "10D3 (VERIFICAN si aplica regla 20 antes)"},
+    {"prioridad": 30, "nombre": "Comision mantenimiento de cuenta", "regex": "MANTENIMIENTO|PAX|PAE|COMISION MANTEN|CUSTODIA", "tipo_movimiento": "GASTO_BANCARIO", "cuenta_pcge_sugerida": "6783 GASTOS BANCARIOS Y SIMILARES"},
+    {"prioridad": 35, "nombre": "Comisiones bancarias generales", "regex": "COMISION|INTERES|CARGO POR|GASTA?\\b|ENVIO|REMESA.*COSTO|CERTIF", "tipo_movimiento": "GASTO_BANCARIO", "cuenta_pcge_sugerida": "6783 GASTOS BANCARIOS Y SIMILARES"},
+    {"prioridad": 40, "nombre": "IGV sobre comisiones", "regex": "IGV COMISION|IGV MANTENIMIENTO|IGV.*BANCARIA", "tipo_movimiento": "IMPUESTO", "cuenta_pcge_sugerida": "401121 IGV - CREDITO FISCAL SERVICIOS (VERIFICAR: IGV de gastos bancarios no es siempre acreditable; decidir con contador entre 4011.21 y 6783)"},
+    {"prioridad": 50, "nombre": "PLIN", "regex": "\\bPLIN\\b|PLIN PLIN|MODO PLIN", "tipo_movimiento": "TRANSFERENCIA_DIGITAL", "cuenta_pcge_sugerida": "10D1 EFECTIVO EN BANCOS - CUENTAS CORRIENTES/AHORROS (VERIFICAR contrapartida real: puede ser pago a proveedor o cobro a cliente)"},
+    {"prioridad": 55, "nombre": "YAPE", "regex": "\\bYAPE\\b|YAPAZO", "tipo_movimiento": "TRANSFERENCIA_DIGITAL", "cuenta_pcge_sugerida": "10D1 (VERIFICAR contrapartida)"},
+    {"prioridad": 60, "nombre": "Transferencia interbancaria envio", "regex": "TRANSF(ERENCIA)?\\b.*(INTERBAN|CEDE?|ENVIO|ENVIADA)|CARGA INTERBAN|TRANSFERENCIA ENVIADA", "tipo_movimiento": "TRANSFERENCIA_INTERBANCARIA", "cuenta_pcge_sugerida": "VERIFICAR segun destino (proveedor 6211/4211, otra cuenta propia 10D1)"},
+    {"prioridad": 65, "nombre": "Transferencia interbancaria recibo", "regex": "ABONO.*(TRANSF|INTERBAN|CEDE|SPEI)|TRANSFERENCIA RECIBIDA|RECIBIDO TRANSF", "tipo_movimiento": "TRANSFERENCIA_INTERBANCARIA", "cuenta_pcge_sugerida": "VERIFICAR segun origen (cliente 1211, otra cuenta propia 10D1)"},
+    {"prioridad": 70, "nombre": "Transferencias propias entre cuentas", "regex": "DE CUENTA PROPIA|TRANSFERENCIA ENTRE CUENTAS|MI CUENTA", "tipo_movimiento": "TRANSFERENCIA_PROPIA", "cuenta_pcge_sugerida": "10D1 (contrapartida 10D1 de otra cuenta)"},
+    {"prioridad": 80, "nombre": "Servicio electrico luz", "regex": "LUZ|ELECTRIC|ENEL|LUMINUS|DELTA?(?: DISTRIBUCION)?|HIDRANDINA|EGEMSA|SENCI|NORTE? ENERGIA|ENERSUR", "tipo_movimiento": "SERVICIO_PUBLICO", "cuenta_pcge_sugerida": "6331 ARRENDAMIENTOS, CANNONAJES Y SERVICIOS - ENERGIA ELECTRICA"},
+    {"prioridad": 85, "nombre": "Servicio agua", "regex": "\\bAGUA\\b|SEDAPAR|SEDALIB|EPS MAPATEC|SENSIC? AGUA|AGUA POTABLE", "tipo_movimiento": "SERVICIO_PUBLICO", "cuenta_pcge_sugerida": "6331 - AGUA"},
+    {"prioridad": 90, "nombre": "Telefono/internet", "regex": "TELEFONO|MOVIL|CLARO|MOVISTAR|BITO?|ENTEL|INTERNET|FIBRA|CABLE|TDP|GOLDEN? TV|DIRETVISA", "tipo_movimiento": "SERVICIO_PUBLICO", "cuenta_pcge_sugerida": "6331 - TELEFONO / INTERNET"},
+    {"prioridad": 100, "nombre": "Seguros", "regex": "SEGURO|PRIMA|PAZ S.A|RIMAC|MAPFRE|LA POSITIVA|SAC? SEGUROS|CHAUX", "tipo_movimiento": "SEGURO", "cuenta_pcge_sugerida": "6371 SEGUROS"},
+    {"prioridad": 110, "nombre": "Pagos de haberes/plasma", "regex": "HABER|PLAZA|PLANILLA|REMUNERAC|BENEFICIOS? SOCIALES|CTS|ASIGNACION FAMILIAR|GRATIFICACION", "tipo_movimiento": "PAGO_HABERES", "cuenta_pcge_sugerida": "6211 REMUNERACIONES O SALARIOS / 401... verificar: pago desde banco acredita 10D1 y debita 40112? planilla por pagar (VERIFICAR con liquidacion de planilla)"},
+    {"prioridad": 120, "nombre": "AFP", "regex": "\\bAFP\\b|INTEGRIDAD|HABITAT|PRIMA AFP", "tipo_movimiento": "PAGO_HABERES_DESCUENTO", "cuenta_pcge_sugerida": "4018 PARTICIPACIONES? (VERIFICAR: aportes AFP suelen estar dentro de planilla 4011/otros tributos)"},
+    {"prioridad": 130, "nombre": "Depositos de clientes/ventas", "regex": "DEPOSITO|CONSOLIDADO VENTAS|VENTAS? POS|MAQUINETA|POS ?NET|RECAUDAC", "tipo_movimiento": "COBRO_CLIENTE", "cuenta_pcge_sugerida": "1211 CLIENTES COMERCIALES - NOMINA (VERIFICAR si es venta del dia 7011 directo)"},
+    {"prioridad": 140, "nombre": "Pago a proveedores", "regex": "PAGO A (PROVEEDOR|TERCERO)|PAYROLL? PROV|FACTURA", "tipo_movimiento": "PAGO_PROVEEDOR", "cuenta_pcge_sugerida": "4211 FUNCIONARIOS - RETRIBUCIONES? (VERIFICAR: proveedores comerciales = 4211 PROVEEDORES COMERCIALES)"},
+    {"prioridad": 150, "nombre": "Intereses ganados", "regex": "INTERESES? GANADOS|ABONO INTERESES|RENDCO?CULTO?|TASA ACTIVA", "tipo_movimiento": "INGRESO_FINANCIERO", "cuenta_pcge_sugerida": "7411 RENDIMIENTOS GANADOS - EFECTIVO Y EQUIVALENTES"},
+    {"prioridad": 160, "nombre": "Alquiler/canones", "regex": "ALQUILER|CANON|ARRENDAMIENTO", "tipo_movimiento": "PAGO_SERVICIO", "cuenta_pcge_sugerida": "6331 ARRENDAMIENTOS"},
+    {"prioridad": 999, "nombre": "DEFAULT", "regex": ".*", "tipo_movimiento": "NO_IDENTIFICADO", "cuenta_pcge_sugerida": null}
+  ]
+}

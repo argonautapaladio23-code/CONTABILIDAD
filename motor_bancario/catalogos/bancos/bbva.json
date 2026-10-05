@@ -1,0 +1,109 @@
+{
+  "banco": "BBVA Perú",
+  "codigo": "BBVA",
+  "activado": true,
+  "identificacion": {
+    "$comentario_VVERIFICAR": "Los patrones below están basados en el texto habitual de los estados de cuenta BBVA Perú pero DEBEN confirmarse contra un PDF real del usuario.",
+    "patrones_detect": [
+      "(?i)bbva",
+      "(?i)banco\\s+bbva"
+    ],
+    "cuenta": {
+      "$comentario": "VERIFICAR: BBVA imprime 'N° de Cuenta' / 'Cuenta' con formato variable (ej. 0011-0000-XXXXX o similar). Regex tentativa.",
+      "regex": "cuenta[^0-9]{0,45}([0-9][0-9 .\\-]{6,20}[0-9])",
+      "grupo": 1
+    },
+    "cci": {
+      "regex": "(?:cci)\\s*[:.]?\\s*([0-9]{4}[\\s-]?[0-9]{4}[\\s-]?[0-9]{6}[\\s-]?[0-9])",
+      "grupo": 1,
+      "opcional": true
+    },
+    "periodo": {
+      "$comentario": "VERIFICAR: BBVA suele imprimir 'Del 01/07/2026 al 31/07/2026' o 'Periodo: JULIO 2026'. Se probán ambos patrones en orden.",
+      "patrones": [
+        {
+          "regex": "del\\s+([0-9]{2}/[0-9]{2}/[0-9]{4})\\s+al\\s+([0-9]{2}/[0-9]{2}/[0-9]{4})",
+          "tipo": "rango_fecha"
+        },
+        {
+          "regex": "(?:per[ií]odo)\\s*[:.]?\\s*([0-9]{1,2}|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)[^0-9a-zñ]+(20[0-9]{2})",
+          "tipo": "mes_anio"
+        }
+      ]
+    },
+    "moneda": {
+      "$comentario": "VERIFICAR: BBVA usa 'S/' o 'S/.' para soles y 'USD' / 'US$' para dólares.",
+      "regex": "(S/\\.\\s|S/\\s|US\\$|USD\\s)",
+      "mapeo": {
+        "S/.": "PEN",
+        "S/": "PEN",
+        "US$": "USD",
+        "USD": "USD"
+      },
+      "default_moneda": "PEN"
+    }
+  },
+  "tabla": {
+    "metodo": "auto",
+    "paginas": {
+      "desde": 1,
+      "hasta": null
+    },
+    "$comentario_columnas": "VERIFICAR posiciones contra PDF real. Orden típico BBVA: Fecha | Descripción | N° Operación | Cargos(S/) | Abonos(S/) | Saldo(S/). En cuentas USD las columnas se rotulan con la moneda.",
+    "columnas": {
+      "fecha": {
+        "posicion": 0.03,
+        "obligatoria": true
+      },
+      "descripcion": {
+        "posicion": 0.32,
+        "obligatoria": true
+      },
+      "nro_operacion": {
+        "posicion": 0.58,
+        "obligatoria": false
+      },
+      "cargo": {
+        "posicion": 0.73,
+        "obligatoria": false
+      },
+      "abono": {
+        "posicion": 0.86,
+        "obligatoria": false
+      },
+      "saldo": {
+        "posicion": 0.96,
+        "obligatoria": true
+      }
+    },
+    "saltos_linea_descripcion": true,
+    "salto_pagina_repite_header": true,
+    "ignoradas_regex": [
+      "(?i)^\\s*estado\\s*de\\s*cuenta",
+      "(?i)^\\s*(saldo\\s*anterior|son\\s+[0-9])",
+      "(?i)^\\s*total(es)?\\s*(de\\s*)?(cargos|abonos|movimientos)?",
+      "(?i)^\\s*p[aá]gina\\s+\\d+(\\s+de\\s+\\d+)?",
+      "(?i)^\\s*bbva\\b",
+      "(?i)^(cargos|abonos|saldo)\\s*$",
+      "(?i)verificador"
+    ],
+    "formato_fecha": {
+      "$comentario": "VERIFICAR: BBVA usa dd/mm/yyyy.",
+      "aceptados": [
+        "%d/%m/%Y",
+        "%d/%m/%y",
+        "%Y-%m-%d"
+      ],
+      "ano_base_yy": 2000
+    },
+    "formato_numeros": {
+      "esperado": "peruano"
+    }
+  },
+  "validacion_saldo": {
+    "activo": true,
+    "orden_espera": "primera_abono_luego_cargo",
+    "$comentario_orden": "VERIFICAR contra PDF real: confirmar si BBVA aplica primero abonos o cargos cuando hay ambos en la misma fecha.",
+    "permitir_iniciar_desde_saldo_impreso": true
+  }
+}
