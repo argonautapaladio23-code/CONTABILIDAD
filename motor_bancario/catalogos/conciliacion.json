@@ -1,0 +1,75 @@
+{
+  "$comentario": "CATALOGO DE CONCILIACION. Todos los criterios son visibles y editables aqui; el motor no usa ningun umbral oculto. Los niveles se ejecutan en orden N1 -> N2 -> N3; lo no casado queda en N4 (cola manual).",
+  "monedas_activas": ["PEN", "USD"],
+  "tolerancia_importe": 0.01,
+  "convenciones_signo": {
+    "$comentario": "Libro mayor cuenta 10Dx: cargo=ingreso al banco, abano=gasto del banco. El motor compara ABSOLUTOS por columna espejo: banco.cargo ~ libro.debe? NO: banco.cargo (sale dinero) se concilia contra libro.haber de la cuenta bancaria. VERIFICAR con el plan de cuentas del usuario.",
+    "banco_cargo_corresponde_a": "libro_haber_10dx",
+    "banco_abono_corresponde_a": "libro_debe_10dx"
+  },
+  "niveles": [
+    {
+      "id": "N1",
+      "nombre": "Exacto",
+      "activo": true,
+      "criterios": ["importe", "fecha", "referencia"],
+      "tolerancia_dias_fecha": 0,
+      "referencia_normalizacion": ["quitar_puntos_comas_guiones", "mayusculas", "recortar_ceros_iniciales"],
+      "$comentario_referencia": "La referencia puede venir de nro_operacion del banco o de campo 'numero_comprobante/glosa' del libro. VERIFICAR campos reales del export del libro."
+    },
+    {
+      "id": "N2",
+      "nombre": "Por fecha",
+      "activo": true,
+      "criterios": ["importe", "fecha"],
+      "tolerancia_dias_fecha": 2,
+      " desempate": "menor_diferencia_dias_luego_menor_diferencia_absoluta_importe"
+    },
+    {
+      "id": "N3",
+      "nombre": "Agrupado",
+      "activo": true,
+      "criterios": ["suma_importes", "ventaja_fechas"],
+      "ventana_dias": 5,
+      "max_documentos_por_grupo": 8,
+      "tipos_permitidos": ["COBRO_CLIENTE", "PAGO_PROVEEDOR", "NO_IDENTIFICADO"],
+      "$comentario": "Busca combinaciones de N documentos del libro cuya suma iguale un movimiento bancario (o viceversa: N movimientos bancarios = 1 asiento). Algoritmo subset-sum acotado por max_documentos_por_grupo para mantenerlo local y rapido."
+    },
+    {
+      "id": "N4",
+      "nombre": "Cola manual",
+      "activo": true,
+      "genera_excel": "salidas/cola_manual_{periodo}.xlsx",
+      "max_candidatos_por_movimiento": 10,
+      "puntaje_candidato": {
+        "$comentario": "score = w1*cercania_importe + w2*cercania_fecha + w3*similitud_descripcion + w4*mismo_banco_cuenta. Sin match exacto requerido: solo ordena candidatos.",
+        "pesos": {"importe": 0.5, "fecha": 0.2, "descripcion": 0.2, "contexto": 0.1},
+        "normalizacion": "cada componente en [0,1], 1 = identico"
+      },
+      "columna_decision_usuario": "decision_usuario",
+      "valores_decision": ["CONFIRMAR_MATCH", "RECHAZAR", "NO_VA_EN_BANCO", "DEJAR_PENDIENTE"],
+      "aprender_reglas": {
+        "$comentario": "Al reimportar el Excel resuelto, cada CONFIRMAR_MATCH agrega una regla al catalogo reglas_aprendidas.json (descripcion_banco -> id_asiento_libro) para uso futuro como N1 reforzado. Nunca sobreescribe clasificacion.json automaticamente: escribe en catalogos/reglas_aprendidas.json.",
+        "activo": true,
+        "archivo_destino": "catalogos/reglas_aprendidas.json",
+        "umbral_reutilizacion": "misma descripcion normalizada + importe dentro de tolerancia"
+      }
+    }
+  ],
+  "saldo_libros_fuente": {
+    "$comentario": "El libro mayor se importa desde Excel/CSV con columnas esperadas: fecha, numero_comprobante, glosa, debe, haber, cuenta_pcge, moneda, id_asiento. Ajustar nombres en mapeo_columnas_libro. VERIFICAR contra el export real del software contable del usuario.",
+    "archivo_sugerido": "datos/libro_mayor.xlsx",
+    "hoja": null,
+    "mapeo_columnas_libro": {
+      "fecha": ["fecha", "fecha_operacion", "fec"],
+      "numero_comprobante": ["numero_comprobante", "n_comprobante", "comprobante", "doc"],
+      "glosa": ["glosa", "descripcion", "detalle"],
+      "debe": ["debe", "debito"],
+      "haber": ["haber", "credito"],
+      "cuenta_pcge": ["cuenta", "cuenta_pcge", "cta_contable"],
+      "moneda": ["moneda"],
+      "id_asiento": ["id", "id_asiento", "item"]
+    },
+    "filtro_cuenta_bancaria": "empieza_por('10D')"
+  }
+}
